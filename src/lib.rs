@@ -405,6 +405,12 @@ impl Build {
             }
         }
 
+        configure.env("CC", "clang -fsanitize-coverage=trace-pc-guard");
+
+        // Compiles but makes sancov fail with "__sanitizer_cov* functions were not found."
+        //configure.env("CC", "clang -fsanitize=address -fsanitize-coverage=trace-pc-guard");
+        //println!("cargo:rustc-link-lib=asan");
+
         // And finally, run the perl configure script!
         configure.current_dir(&inner_dir);
         self.run_command(configure, "configuring OpenSSL build");
