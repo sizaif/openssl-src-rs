@@ -33,7 +33,7 @@ seed = []
 # Uses clang to compile OpenSSL with sancov support
 trace-pc-guard = []
 # Deterministic random
-norand = []
+no-rand = []
 
 [workspace]
 members = ['testcrate']

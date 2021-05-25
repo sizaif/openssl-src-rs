@@ -174,13 +174,8 @@ impl Build {
             configure.arg("no-seed");
         }
 
-        println!("cargo:warning=running12123");
-        // todo for some reason feature check is not working
-        //if cfg!(feature = "norand") {
-            println!("cargo:warning=doing norand features");
+        if cfg!(feature = "no-rand") {
             configure.arg("-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION");
-            //configure.arg("-DPREDICT"); // does not work
-            //configure.arg("no-engine");
 
             let root = Path::new(env!("CARGO_MANIFEST_DIR"));
             let file = root.join("src").join("deterministic_rand.c");
@@ -192,7 +187,7 @@ impl Build {
             cc::Build::new()
                 .file(deterministic_rand)
                 .compile("deterministic_rand");
-       //}
+       }
 
         if target.contains("musl") || target.contains("windows") {
             // This actually fails to compile on musl (it needs linux/version.h
