@@ -4,6 +4,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use fs::canonicalize;
 
 pub fn source_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("openssl")
@@ -172,6 +173,26 @@ impl Build {
         if cfg!(not(feature = "seed")) {
             configure.arg("no-seed");
         }
+
+        println!("cargo:warning=running12123");
+        // todo for some reason feature check is not working
+        //if cfg!(feature = "norand") {
+            println!("cargo:warning=doing norand features");
+            configure.arg("-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION");
+            //configure.arg("-DPREDICT"); // does not work
+            //configure.arg("no-engine");
+
+            let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+            let file = root.join("src").join("deterministic_rand.c");
+            let buf = canonicalize(&file).unwrap();
+            let deterministic_rand = buf.to_str().unwrap();
+
+            println!("cargo:rerun-if-changed={}", deterministic_rand);
+
+            cc::Build::new()
+                .file(deterministic_rand)
+                .compile("deterministic_rand");
+       //}
 
         if target.contains("musl") || target.contains("windows") {
             // This actually fails to compile on musl (it needs linux/version.h
