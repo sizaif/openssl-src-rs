@@ -3,7 +3,9 @@
 
 // These don't need to do anything if you don't have anything for them to do.
 static void stdlib_rand_cleanup() {}
-static int stdlib_rand_add(const void *buf, int num, double add_entropy) {}
+static int stdlib_rand_add(const void *buf, int num, double add_entropy) {
+    return 1;
+}
 static int stdlib_rand_status() { return 1; }
 
 // Seed the RNG.  srand() takes an unsigned int, so we just use the first
@@ -11,6 +13,7 @@ static int stdlib_rand_status() { return 1; }
 static int stdlib_rand_seed(const void *buf, int num)
 {
     srand( *((unsigned int *) buf) );
+    return 1;
 }
 
 // Fill the buffer with random bytes.  For each byte in the buffer, we generate
