@@ -421,8 +421,8 @@ impl Build {
             }
         }
 
-        if cfg!(feature = "trace-pc-guard") {
-            configure.env("CC", "clang -fsanitize-coverage=trace-pc-guard");
+        if cfg!(feature = "sancov") {
+            configure.env("CC", "clang -fsanitize-coverage=trace-pc-guard,trace-cmp");
         }
 
         // Compiles but makes sancov fail with "__sanitizer_cov* functions were not found."

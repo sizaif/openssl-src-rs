@@ -19,7 +19,7 @@ exclude = [
 [features]
 # Enables features which are neccassary to make openssl ready for fuzzing, somehow I'm ont able to patch these in,
 # therefore we need to specify them here. todo: We probably would need to patch openssl-sys which uses openssl-src
-default = ["trace-pc-guard", "no-rand"]
+default = ["sancov", "no-rand"]
 # Enables compilation of some older algorithms: md2 (hash), rc5 (block cypher) and enabled use of
 # some weaker algorithms in SSL connections. These are generally not recommended for use.
 weak-crypto = []
@@ -33,7 +33,7 @@ idea = []
 # otherwise not widely supported.
 seed = []
 # Uses clang to compile OpenSSL with sancov support
-trace-pc-guard = []
+sancov = []
 # Deterministic random
 no-rand = []
 
