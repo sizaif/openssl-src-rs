@@ -428,7 +428,7 @@ impl Build {
         }
 
         if cfg!(feature = "sanitizer") {
-            cc.push_str(" -fsanitize=memory"); // todo is address sanitizer better?
+            cc.push_str(" -fsanitize=address"); // todo is memory sanitizer better?
         }
 
         configure.env("CC", cc);
