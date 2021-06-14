@@ -19,7 +19,7 @@ exclude = [
 [features]
 # Enables features which are neccassary to make openssl ready for fuzzing, somehow I'm ont able to patch these in,
 # therefore we need to specify them here. todo: We probably would need to patch openssl-sys which uses openssl-src
-default = ["sancov", "no-rand"]
+default = ["sancov", "no-rand", "sanitizer"]
 # Enables compilation of some older algorithms: md2 (hash), rc5 (block cypher) and enabled use of
 # some weaker algorithms in SSL connections. These are generally not recommended for use.
 weak-crypto = []
@@ -36,6 +36,8 @@ seed = []
 sancov = []
 # Deterministic random
 no-rand = []
+# Enables -fsanitize=address,memory
+sanitizer = []
 
 [workspace]
 members = ['testcrate']

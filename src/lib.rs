@@ -421,9 +421,17 @@ impl Build {
             }
         }
 
+        let mut cc = "clang".to_owned();
+
         if cfg!(feature = "sancov") {
-            configure.env("CC", "clang -fsanitize-coverage=trace-pc-guard,trace-cmp");
+            cc.push_str(" -fsanitize-coverage=trace-pc-guard,trace-cmp");
         }
+
+        if cfg!(feature = "sanitizer") {
+            cc.push_str(" -fsanitize=memory"); // todo is address sanitizer better?
+        }
+
+        configure.env("CC", cc);
 
         // Compiles but makes sancov fail with "__sanitizer_cov* functions were not found."
         //configure.env("CC", "clang -fsanitize=address -fsanitize-coverage=trace-pc-guard");
