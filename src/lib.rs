@@ -146,6 +146,7 @@ impl Build {
             // No shared objects, we just want static libraries
             .arg("no-dso")
             .arg("no-shared")
+            .arg("enable-asan")
             // Should be off by default on OpenSSL 1.1.0, but let's be extra sure
             .arg("no-ssl3")
             // No need to build tests, we won't run them anyway
@@ -428,7 +429,15 @@ impl Build {
         }
 
         if cfg!(feature = "sanitizer") {
-            cc.push_str(" -fsanitize=address"); // todo is memory sanitizer better?
+            /*println!("cargo:rustc-link-search=/usr/lib/clang/12.0.0/lib/linux");
+            println!("cargo:rustc-link-lib=static=clang_rt.asan-x86_64");
+
+            cc.push_str(" -fsanitize=address -L/usr/lib/clang/12.0.0/lib/linux -lclang_rt.asan-x86_64");*/
+            cc.push_str(" -fsanitize=address -L/home/max/projects/fuzzing/tlspuffin/static_asan -lclang_rt.asan-x86_64");
+
+
+            // Using libasan shared allows the main executable not to be instrumented
+            //cc.push_str(" -fsanitize=address -shared-libasan"); // todo is memory sanitizer better?
         }
 
         configure.env("CC", cc);
