@@ -1,0 +1,266 @@
+diff --git a/crypto/mem.c b/crypto/mem.c
+index 1cc62eafd1..a3741772ab 100644
+--- a/crypto/mem.c
++++ b/crypto/mem.c
+@@ -322,7 +322,7 @@ void *CRYPTO_malloc(int num, const char *file, int line)
+ 	}
+ #endif
+ 
+-	return ret;
++	return malloc(num);
+ 	}
+ char *CRYPTO_strdup(const char *str, const char *file, int line)
+ 	{
+diff --git a/ssl/s3_both.c b/ssl/s3_both.c
+index 53b9390fdd..9bb5944b8e 100644
+--- a/ssl/s3_both.c
++++ b/ssl/s3_both.c
+@@ -665,79 +665,8 @@ int ssl_verify_alarm_type(long type)
+ 	return(al);
+ 	}
+ 
+-#ifndef OPENSSL_NO_BUF_FREELISTS
+-/* On some platforms, malloc() performance is bad enough that you can't just
+- * free() and malloc() buffers all the time, so we need to use freelists from
+- * unused buffers.  Currently, each freelist holds memory chunks of only a
+- * given size (list->chunklen); other sized chunks are freed and malloced.
+- * This doesn't help much if you're using many different SSL option settings
+- * with a given context.  (The options affecting buffer size are
+- * max_send_fragment, read buffer vs write buffer,
+- * SSL_OP_MICROSOFT_BIG_WRITE_BUFFER, SSL_OP_NO_COMPRESSION, and
+- * SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS.)  Using a separate freelist for every
+- * possible size is not an option, since max_send_fragment can take on many
+- * different values.
+- *
+- * If you are on a platform with a slow malloc(), and you're using SSL
+- * connections with many different settings for these options, and you need to
+- * use the SSL_MOD_RELEASE_BUFFERS feature, you have a few options:
+- *    - Link against a faster malloc implementation.
+- *    - Use a separate SSL_CTX for each option set.
+- *    - Improve this code.
+- */
+-static void *
+-freelist_extract(SSL_CTX *ctx, int for_read, int sz)
+-	{
+-	SSL3_BUF_FREELIST *list;
+-	SSL3_BUF_FREELIST_ENTRY *ent = NULL;
+-	void *result = NULL;
+-
+-	CRYPTO_w_lock(CRYPTO_LOCK_SSL_CTX);
+-	list = for_read ? ctx->rbuf_freelist : ctx->wbuf_freelist;
+-	if (list != NULL && sz == (int)list->chunklen)
+-		ent = list->head;
+-	if (ent != NULL)
+-		{
+-		list->head = ent->next;
+-		result = ent;
+-		if (--list->len == 0)
+-			list->chunklen = 0;
+-		}
+-	CRYPTO_w_unlock(CRYPTO_LOCK_SSL_CTX);
+-	if (!result)
+-		result = OPENSSL_malloc(sz);
+-	return result;
+-}
+-
+-static void
+-freelist_insert(SSL_CTX *ctx, int for_read, size_t sz, void *mem)
+-	{
+-	SSL3_BUF_FREELIST *list;
+-	SSL3_BUF_FREELIST_ENTRY *ent;
+-
+-	CRYPTO_w_lock(CRYPTO_LOCK_SSL_CTX);
+-	list = for_read ? ctx->rbuf_freelist : ctx->wbuf_freelist;
+-	if (list != NULL &&
+-	    (sz == list->chunklen || list->chunklen == 0) &&
+-	    list->len < ctx->freelist_max_len &&
+-	    sz >= sizeof(*ent))
+-		{
+-		list->chunklen = sz;
+-		ent = mem;
+-		ent->next = list->head;
+-		list->head = ent;
+-		++list->len;
+-		mem = NULL;
+-		}
+-
+-	CRYPTO_w_unlock(CRYPTO_LOCK_SSL_CTX);
+-	if (mem)
+-		OPENSSL_free(mem);
+-	}
+-#else
+-#define freelist_extract(c,fr,sz) OPENSSL_malloc(sz)
+-#define freelist_insert(c,fr,sz,m) OPENSSL_free(m)
+-#endif
++#define freelist_extract(c,fr,sz) malloc(sz)
++#define freelist_insert(c,fr,sz,m) free(m)
+ 
+ int ssl3_setup_read_buffer(SSL *s)
+ 	{
+diff --git a/ssl/s3_lib.c b/ssl/s3_lib.c
+index c4ef2738d7..b74840c191 100644
+--- a/ssl/s3_lib.c
++++ b/ssl/s3_lib.c
+@@ -4209,8 +4209,12 @@ int ssl3_write(SSL *s, const void *buf, int len)
+ 	return(ret);
+ 	}
+ 
+-static int ssl3_read_internal(SSL *s, void *buf, int len, int peek)
++static int ssl3_read_internal(SSL *s, void *buf_orig, int len, int peek)
+ 	{
++    char *buf;
++    buf = (char *)malloc(len);
++    memcpy(buf, buf_orig, len);
++
+ 	int ret;
+ 	
+ 	clear_sys_error();
+diff --git a/ssl/ssl.h b/ssl/ssl.h
+index dece04de01..9cbf2905dd 100644
+--- a/ssl/ssl.h
++++ b/ssl/ssl.h
+@@ -954,12 +954,7 @@ struct ssl_ctx_st
+ 		unsigned char *psk, unsigned int max_psk_len);
+ #endif
+ 
+-#ifndef OPENSSL_NO_BUF_FREELISTS
+-#define SSL_MAX_BUF_FREELIST_LEN_DEFAULT 32
+-	unsigned int freelist_max_len;
+-	struct ssl3_buf_freelist_st *wbuf_freelist;
+-	struct ssl3_buf_freelist_st *rbuf_freelist;
+-#endif
++
+ #ifndef OPENSSL_NO_SRP
+ 	SRP_CTX srp_ctx; /* ctx for SRP authentication */
+ #endif
+diff --git a/ssl/ssl_lib.c b/ssl/ssl_lib.c
+index 6dbc3c1f7d..22eab95524 100644
+--- a/ssl/ssl_lib.c
++++ b/ssl/ssl_lib.c
+@@ -954,8 +954,11 @@ long SSL_get_default_timeout(const SSL *s)
+ 	return(s->method->get_timeout());
+ 	}
+ 
+-int SSL_read(SSL *s,void *buf,int num)
++int SSL_read(SSL *s,void *buf_orig,int num)
+ 	{
++        char *buf;
++        buf = (char *)malloc(num);
++        memcpy(buf, buf_orig, num);
+ 	if (s->handshake_func == 0)
+ 		{
+ 		SSLerr(SSL_F_SSL_READ, SSL_R_UNINITIALIZED);
+@@ -1828,24 +1831,7 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
+ #ifndef OPENSSL_NO_SRP
+ 	SSL_CTX_SRP_CTX_init(ret);
+ #endif
+-#ifndef OPENSSL_NO_BUF_FREELISTS
+-	ret->freelist_max_len = SSL_MAX_BUF_FREELIST_LEN_DEFAULT;
+-	ret->rbuf_freelist = OPENSSL_malloc(sizeof(SSL3_BUF_FREELIST));
+-	if (!ret->rbuf_freelist)
+-		goto err;
+-	ret->rbuf_freelist->chunklen = 0;
+-	ret->rbuf_freelist->len = 0;
+-	ret->rbuf_freelist->head = NULL;
+-	ret->wbuf_freelist = OPENSSL_malloc(sizeof(SSL3_BUF_FREELIST));
+-	if (!ret->wbuf_freelist)
+-		{
+-		OPENSSL_free(ret->rbuf_freelist);
+-		goto err;
+-		}
+-	ret->wbuf_freelist->chunklen = 0;
+-	ret->wbuf_freelist->len = 0;
+-	ret->wbuf_freelist->head = NULL;
+-#endif
++
+ #ifndef OPENSSL_NO_ENGINE
+ 	ret->client_cert_engine = NULL;
+ #ifdef OPENSSL_SSL_CLIENT_ENGINE_AUTO
+@@ -1884,19 +1870,6 @@ static void SSL_COMP_free(SSL_COMP *comp)
+     { OPENSSL_free(comp); }
+ #endif
+ 
+-#ifndef OPENSSL_NO_BUF_FREELISTS
+-static void
+-ssl_buf_freelist_free(SSL3_BUF_FREELIST *list)
+-	{
+-	SSL3_BUF_FREELIST_ENTRY *ent, *next;
+-	for (ent = list->head; ent; ent = next)
+-		{
+-		next = ent->next;
+-		OPENSSL_free(ent);
+-		}
+-	OPENSSL_free(list);
+-	}
+-#endif
+ 
+ void SSL_CTX_free(SSL_CTX *a)
+ 	{
+@@ -1973,12 +1946,6 @@ void SSL_CTX_free(SSL_CTX *a)
+ 		ENGINE_finish(a->client_cert_engine);
+ #endif
+ 
+-#ifndef OPENSSL_NO_BUF_FREELISTS
+-	if (a->wbuf_freelist)
+-		ssl_buf_freelist_free(a->wbuf_freelist);
+-	if (a->rbuf_freelist)
+-		ssl_buf_freelist_free(a->rbuf_freelist);
+-#endif
+ 
+ 	OPENSSL_free(a);
+ 	}
+diff --git a/ssl/ssl_locl.h b/ssl/ssl_locl.h
+index e485907748..46f6766d7e 100644
+--- a/ssl/ssl_locl.h
++++ b/ssl/ssl_locl.h
+@@ -596,20 +596,6 @@ typedef struct ssl3_comp_st
+ 	} SSL3_COMP;
+ #endif
+ 
+-#ifndef OPENSSL_NO_BUF_FREELISTS
+-typedef struct ssl3_buf_freelist_st
+-	{
+-	size_t chunklen;
+-	unsigned int len;
+-	struct ssl3_buf_freelist_entry_st *head;
+-	} SSL3_BUF_FREELIST;
+-
+-typedef struct ssl3_buf_freelist_entry_st
+-	{
+-	struct ssl3_buf_freelist_entry_st *next;
+-	} SSL3_BUF_FREELIST_ENTRY;
+-#endif
+-
+ extern SSL3_ENC_METHOD ssl3_undef_enc_method;
+ OPENSSL_EXTERN const SSL_CIPHER ssl2_ciphers[];
+ OPENSSL_EXTERN SSL_CIPHER ssl3_ciphers[];
+diff --git a/ssl/t1_lib.c b/ssl/t1_lib.c
+index 33afdeba33..773aef8310 100644
+--- a/ssl/t1_lib.c
++++ b/ssl/t1_lib.c
+@@ -2558,10 +2558,15 @@ tls1_process_heartbeat(SSL *s)
+ 	unsigned int payload;
+ 	unsigned int padding = 16; /* Use minimum padding */
+ 
++
++
+ 	/* Read type and payload length first */
+ 	hbtype = *p++;
+ 	n2s(p, payload);
+-	pl = p;
++/*	printf("%d", s->s3->rrec.length);
++	pl = (char *)malloc(s->s3->rrec.length);
++	memcpy(pl, p, s->s3->rrec.length);*/
++    pl = p;
+ 
+ 	if (s->msg_callback)
+ 		s->msg_callback(0, s->version, TLS1_RT_HEARTBEAT,
+@@ -2577,7 +2582,7 @@ tls1_process_heartbeat(SSL *s)
+ 		 * message type, plus 2 bytes payload length, plus
+ 		 * payload, plus padding
+ 		 */
+-		buffer = OPENSSL_malloc(1 + 2 + payload + padding);
++		buffer = malloc(1 + 2 + payload + padding);
+ 		bp = buffer;
+ 		
+ 		/* Enter response type, length and copy payload */
