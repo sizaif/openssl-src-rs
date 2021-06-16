@@ -129,6 +129,8 @@ impl Build {
 
         let inner_dir = build_dir.join("src");
         fs::create_dir_all(&inner_dir).unwrap();
+        // Copy again if any file changed
+        println!("cargo:rerun-if-changed={}", source_dir().into_os_string().into_string().unwrap());
         cp_r(&source_dir(), &inner_dir);
         apply_patches(target, &inner_dir);
 
@@ -427,12 +429,16 @@ impl Build {
             cc.push_str(" -fsanitize-coverage=trace-pc-guard,trace-cmp");
         }
 
-        configure.env("CC", cc);
-
         if cfg!(feature = "asan") {
-            configure.arg("enable-asan"); // If compiled with clang this implies "-static-libasan"
+            // Disable freelists as they may interfere with malloc
+            configure.arg("-DOPENSSL_NO_BUF_FREELISTS");
+
+            //configure.arg("enable-asan"); // If compiled with clang this implies "-static-libasan"
+            cc.push_str(" -fsanitize=address -shared-libsan");
             println!("cargo:rustc-link-lib=asan");
         }
+
+        configure.env("CC", cc);
 
         // And finally, run the perl configure script!
         configure.current_dir(&inner_dir);
@@ -456,7 +462,7 @@ impl Build {
             self.run_command(depend, "building OpenSSL dependencies");
 
             let mut build = self.cmd_make();
-            build.arg("build_libs").current_dir(&inner_dir);
+            build.current_dir(&inner_dir);
             if !cfg!(windows) {
                 if let Some(s) = env::var_os("CARGO_MAKEFLAGS") {
                     build.env("MAKEFLAGS", s);
@@ -472,7 +478,7 @@ impl Build {
             self.run_command(build, "building OpenSSL");
 
             let mut install = self.cmd_make();
-            install.arg("install_dev").current_dir(&inner_dir);
+            install.arg("install_sw").current_dir(&inner_dir);
             self.run_command(install, "installing OpenSSL");
         }
 
