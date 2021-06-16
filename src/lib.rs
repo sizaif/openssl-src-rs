@@ -1,10 +1,10 @@
 extern crate cc;
 
+use fs::canonicalize;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use fs::canonicalize;
 
 pub fn source_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("openssl")
@@ -130,7 +130,10 @@ impl Build {
         let inner_dir = build_dir.join("src");
         fs::create_dir_all(&inner_dir).unwrap();
         // Copy again if any file changed
-        println!("cargo:rerun-if-changed={}", source_dir().into_os_string().into_string().unwrap());
+        println!(
+            "cargo:rerun-if-changed={}",
+            source_dir().into_os_string().into_string().unwrap()
+        );
         cp_r(&source_dir(), &inner_dir);
         apply_patches(target, &inner_dir);
 
@@ -189,7 +192,7 @@ impl Build {
             cc::Build::new()
                 .file(deterministic_rand)
                 .compile("deterministic_rand");
-       }
+        }
 
         if target.contains("musl") || target.contains("windows") {
             // This actually fails to compile on musl (it needs linux/version.h
