@@ -179,22 +179,6 @@ impl Build {
             configure.arg("no-seed");
         }
 
-        if cfg!(feature = "no-rand") {
-            configure.arg("-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION");
-
-            let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-            let file = root.join("src").join("deterministic_rand.c");
-            let buf = canonicalize(&file).unwrap();
-            let deterministic_rand = buf.to_str().unwrap();
-
-            println!("cargo:rerun-if-changed={}", deterministic_rand);
-
-            cc::Build::new()
-                .file(deterministic_rand)
-                .include(inner_dir.join("include"))
-                .compile("deterministic_rand");
-        }
-
         if target.contains("musl") || target.contains("windows") {
             // This actually fails to compile on musl (it needs linux/version.h
             // right now) but we don't actually need this most of the time.
@@ -491,6 +475,22 @@ impl Build {
         } else {
             vec!["ssl".to_string(), "crypto".to_string()]
         };
+
+        if cfg!(feature = "no-rand") {
+            configure.arg("-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION");
+
+            let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+            let file = root.join("src").join("deterministic_rand.c");
+            let buf = canonicalize(&file).unwrap();
+            let deterministic_rand = buf.to_str().unwrap();
+
+            println!("cargo:rerun-if-changed={}", deterministic_rand);
+
+            cc::Build::new()
+                .file(deterministic_rand)
+                .include(install_dir.join("include"))
+                .compile("deterministic_rand");
+        }
 
         //fs::remove_dir_all(&inner_dir).unwrap();
 
