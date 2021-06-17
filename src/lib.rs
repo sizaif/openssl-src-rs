@@ -191,7 +191,7 @@ impl Build {
 
             cc::Build::new()
                 .file(deterministic_rand)
-                .include(install_dir.join("include"))
+                .include(inner_dir.join("include"))
                 .compile("deterministic_rand");
         }
 
