@@ -411,6 +411,10 @@ impl Build {
             }
         }
 
+        if cfg!(feature = "no-rand") {
+            configure.arg("-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION");
+        }
+
         let mut cc = "clang".to_owned();
 
         if cfg!(feature = "sancov") {
@@ -477,8 +481,6 @@ impl Build {
         };
 
         if cfg!(feature = "no-rand") {
-            configure.arg("-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION");
-
             let root = Path::new(env!("CARGO_MANIFEST_DIR"));
             let file = root.join("src").join("deterministic_rand.c");
             let buf = canonicalize(&file).unwrap();
