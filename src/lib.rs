@@ -120,12 +120,11 @@ impl Build {
         let build_dir = out_dir.join("build");
         let install_dir = out_dir.join("install");
 
-        if build_dir.exists() {
-            fs::remove_dir_all(&build_dir).unwrap();
-        }
         if install_dir.exists() {
             fs::remove_dir_all(&install_dir).unwrap();
         }
+
+        let clean_build = !build_dir.exists();
 
         let inner_dir = build_dir.join("src");
         fs::create_dir_all(&inner_dir).unwrap();
@@ -134,8 +133,15 @@ impl Build {
             "cargo:rerun-if-changed={}",
             source_dir().into_os_string().into_string().unwrap()
         );
-        cp_r(&source_dir(), &inner_dir);
+        //cp_r(&source_dir(), &inner_dir);
+        let mut cp = Command::new("cp");
+        cp.arg("-r");
+        cp.arg("-u"); // only update files if out of date
+        cp.arg(source_dir().into_os_string().into_string().unwrap() + "/.");
+        cp.arg(inner_dir.clone().into_os_string().into_string().unwrap());
+        self.run_command(cp, "dsf");
         apply_patches(target, &inner_dir);
+
 
         let perl_program =
             env::var("OPENSSL_SRC_PERL").unwrap_or(env::var("PERL").unwrap_or("perl".to_string()));
@@ -158,7 +164,8 @@ impl Build {
             // Nothing related to zlib please
             .arg("no-comp")
             .arg("no-zlib")
-            .arg("no-zlib-dynamic");
+            .arg("no-zlib-dynamic")
+            .arg("no-tests"); // speed up compilation
 
         if cfg!(not(feature = "weak-crypto")) {
             configure
@@ -434,7 +441,10 @@ impl Build {
 
         // And finally, run the perl configure script!
         configure.current_dir(&inner_dir);
-        self.run_command(configure, "configuring OpenSSL build");
+
+        if clean_build {
+            self.run_command(configure, "configuring OpenSSL build");
+        }
 
         // On MSVC we use `nmake.exe` with a slightly different invocation, so
         // have that take a different path than the standard `make` below.
@@ -453,6 +463,7 @@ impl Build {
             depend.arg("depend").current_dir(&inner_dir);
             self.run_command(depend, "building OpenSSL dependencies");
 
+            println!("make directory {:?}", inner_dir);
             let mut build = self.cmd_make();
             build.current_dir(&inner_dir);
             if !cfg!(windows) {
