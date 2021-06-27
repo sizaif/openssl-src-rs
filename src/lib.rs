@@ -425,7 +425,7 @@ impl Build {
         let mut cc = "clang".to_owned();
 
         if cfg!(feature = "sancov") {
-            cc.push_str(" -fsanitize-coverage=trace-pc-guard,trace-cmp");
+            cc.push_str(" -fsanitize-coverage=trace-pc-guard");
         }
 
         if cfg!(feature = "asan") {
