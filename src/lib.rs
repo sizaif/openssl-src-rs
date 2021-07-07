@@ -124,6 +124,8 @@ impl Build {
             fs::remove_dir_all(&install_dir).unwrap();
         }
 
+        let clean_build = !build_dir.exists();
+
         let inner_dir = build_dir.join("src");
         fs::create_dir_all(&inner_dir).unwrap();
         // Copy again if any file changed
@@ -440,7 +442,9 @@ impl Build {
         // And finally, run the perl configure script!
         configure.current_dir(&inner_dir);
 
-        self.run_command(configure, "configuring OpenSSL build");
+        if clean_build {
+            self.run_command(configure, "configuring OpenSSL build");
+        }
 
         // On MSVC we use `nmake.exe` with a slightly different invocation, so
         // have that take a different path than the standard `make` below.
@@ -455,10 +459,10 @@ impl Build {
             install.arg("install_dev").current_dir(&inner_dir);
             self.run_command(install, "installing OpenSSL");
         } else {
-            let mut depend = self.cmd_make();
+/*            let mut depend = self.cmd_make();
             depend.arg("depend").current_dir(&inner_dir);
             self.run_command(depend, "building OpenSSL dependencies");
-
+*/
             println!("make directory {:?}", inner_dir);
             let mut build = self.cmd_make();
             build.current_dir(&inner_dir);
