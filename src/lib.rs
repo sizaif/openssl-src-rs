@@ -453,18 +453,20 @@ impl Build {
             install.arg("install_dev").current_dir(&inner_dir);
             self.run_command(install, "installing OpenSSL");
         } else {
-/*            let mut depend = self.cmd_make();
+            let mut depend = self.cmd_make();
             depend.arg("depend").current_dir(&inner_dir);
             self.run_command(depend, "building OpenSSL dependencies");
-*/
+
             println!("make directory {:?}", inner_dir);
             let mut build = self.cmd_make();
             build.current_dir(&inner_dir);
-            if !cfg!(windows) {
+
+            // This breaks compilation of OpenSSL 1.0.1
+            /*if !cfg!(windows) {
                 if let Some(s) = env::var_os("CARGO_MAKEFLAGS") {
                     build.env("MAKEFLAGS", s);
                 }
-            }
+            }*/
 
             if let Some(ref isysr) = ios_isysroot {
                 let components: Vec<&str> = isysr.split("/SDKs/").collect();
