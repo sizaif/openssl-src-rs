@@ -48,16 +48,3 @@ void make_openssl_deterministic()
 {
     RAND_set_rand_method(&stdlib_rand_meth);
 }
-
-#include <openssl/crypto.h>
-
-void test_crash_heap_overflow()
-{
-    char *buf;
-    buf = (char *)OPENSSL_malloc(sizeof(char)*10);
-
-    char *dest;
-    dest = (char *)OPENSSL_malloc(sizeof(char)*5000);
-
-    memcpy(dest, buf, 5000);
-}

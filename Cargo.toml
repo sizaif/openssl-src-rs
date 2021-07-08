@@ -19,7 +19,7 @@ exclude = [
 [features]
 # Enables features which are neccassary to make openssl ready for fuzzing, somehow I'm ont able to patch these in,
 # therefore we need to specify them here.
-default = []
+default = [ ]
 # Enables compilation of some older algorithms: md2 (hash), rc5 (block cypher) and enabled use of
 # some weaker algorithms in SSL connections. These are generally not recommended for use.
 weak-crypto = []
@@ -44,3 +44,5 @@ members = ['testcrate']
 
 [dependencies]
 cc = "1.0"
+bindgen = "0.53"
+security-claims = { path = "../security-claims" }

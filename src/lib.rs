@@ -1,10 +1,13 @@
 extern crate cc;
+extern crate bindgen;
 
 use fs::canonicalize;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::fs::File;
+use std::io::Write;
 
 pub fn source_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("openssl")
@@ -113,12 +116,36 @@ impl Build {
         false
     }
 
+    pub fn build_deterministic_rand(install_dir: &PathBuf) {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let file = root.join("src").join("deterministic_rand.c");
+        let buf = canonicalize(&file).unwrap();
+        let deterministic_rand = buf.to_str().unwrap();
+
+        println!("cargo:rerun-if-changed={}", deterministic_rand);
+
+        cc::Build::new()
+            .file(deterministic_rand)
+            .include(install_dir.join("include"))
+            .compile("deterministic_rand");
+    }
+
+    pub fn insert_claim_interface(additional_headers: &PathBuf) -> std::io::Result<()> {
+        let mut file = File::create(additional_headers.join("claim-interface.h"))?;
+        file.write_all(security_claims::CLAIM_INTERFACE_H.as_bytes())?;
+        Ok(())
+    }
+
     pub fn build(&mut self) -> Artifacts {
         let target = &self.target.as_ref().expect("TARGET dir not set")[..];
         let host = &self.host.as_ref().expect("HOST dir not set")[..];
         let out_dir = self.out_dir.as_ref().expect("OUT_DIR not set");
         let build_dir = out_dir.join("build");
         let install_dir = out_dir.join("install");
+        let additional_headers = out_dir.join("additional_headers");
+
+        fs::create_dir_all(&additional_headers).unwrap();
+        Self::insert_claim_interface(&additional_headers).unwrap();
 
         if install_dir.exists() {
             fs::remove_dir_all(&install_dir).unwrap();
@@ -422,6 +449,9 @@ impl Build {
             cc.push_str(" -fsanitize-coverage=trace-pc-guard");
         }
 
+        // Make additional headers available
+        cc.push_str(format!(" -I{}", canonicalize(&additional_headers).unwrap().to_str().unwrap()).as_str());
+
         if cfg!(feature = "asan") {
             // Disable freelists as they may interfere with malloc
             configure.arg("-DOPENSSL_NO_BUF_FREELISTS");
@@ -488,17 +518,7 @@ impl Build {
         };
 
         if cfg!(feature = "no-rand") {
-            let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-            let file = root.join("src").join("deterministic_rand.c");
-            let buf = canonicalize(&file).unwrap();
-            let deterministic_rand = buf.to_str().unwrap();
-
-            println!("cargo:rerun-if-changed={}", deterministic_rand);
-
-            cc::Build::new()
-                .file(deterministic_rand)
-                .include(install_dir.join("include"))
-                .compile("deterministic_rand");
+            Self::build_deterministic_rand(&install_dir);
         }
 
         //fs::remove_dir_all(&inner_dir).unwrap();
