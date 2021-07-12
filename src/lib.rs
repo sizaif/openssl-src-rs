@@ -131,8 +131,13 @@ impl Build {
     }
 
     pub fn insert_claim_interface(additional_headers: &PathBuf) -> std::io::Result<()> {
-        let mut file = File::create(additional_headers.join("claim-interface.h"))?;
-        file.write_all(security_claims::CLAIM_INTERFACE_H.as_bytes())?;
+        let interface = security_claims::CLAIM_INTERFACE_H;
+
+        let path = additional_headers.join("claim-interface.h");
+
+        let mut file = File::create(path)?;
+        file.write_all(interface.as_bytes())?;
+
         Ok(())
     }
 
