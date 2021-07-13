@@ -2,6 +2,8 @@
 #include <openssl/rand.h>
 #include <stdlib.h>
 
+#define UNUSED(x) (void)(x)
+
 // Seed the RNG. srand() takes an unsigned int, so we just use the first
 // sizeof(unsigned int) bytes in the buffer to seed the RNG.
 static int stdlib_rand_seed(const void *buf, int num)
@@ -29,6 +31,9 @@ static int stdlib_rand_bytes(unsigned char *buf, int num)
 static void stdlib_rand_cleanup() {}
 static int stdlib_rand_add(const void *buf, int num, double add_entropy)
 {
+    UNUSED(buf);
+    UNUSED(num);
+    UNUSED(add_entropy);
     return 1;
 }
 static int stdlib_rand_status()
