@@ -12,6 +12,8 @@ use std::io::Write;
 pub fn source_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join(if cfg!(feature = "openssl101f") {
         "openssl101f"
+    } else if cfg!(feature = "openssl102u") {
+        "openssl102u"
     } else {
         "openssl"
     })
