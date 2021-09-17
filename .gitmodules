@@ -4,3 +4,6 @@
 [submodule "openssl101f"]
 	path = openssl101f
 	url = https://github.com/openssl/openssl
+[submodule "openssl102u"]
+	path = openssl102u
+	url = https://github.com/openssl/openssl
