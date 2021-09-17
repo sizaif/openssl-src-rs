@@ -38,6 +38,8 @@ sancov = []
 no-rand = []
 # Enables -fsanitize=address
 asan = []
+# Use openssl101f submodule
+openssl101f = []
 
 [workspace]
 members = ['testcrate']

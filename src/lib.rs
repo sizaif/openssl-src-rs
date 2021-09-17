@@ -10,7 +10,11 @@ use std::fs::File;
 use std::io::Write;
 
 pub fn source_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("openssl")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join(if cfg!(feature = "openssl101f") {
+        "openssl101f"
+    } else {
+        "openssl"
+    })
 }
 
 pub fn version() -> &'static str {
