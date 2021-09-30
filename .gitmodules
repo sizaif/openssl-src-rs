@@ -1,9 +1,9 @@
 [submodule "openssl"]
 	path = openssl
-	url = https://github.com/openssl/openssl
+	url = https://github.com/tlspuffin/openssl
 [submodule "openssl101f"]
 	path = openssl101f
-	url = https://github.com/openssl/openssl
+	url = https://github.com/tlspuffin/openssl
 [submodule "openssl102u"]
 	path = openssl102u
-	url = https://github.com/openssl/openssl
+	url = https://github.com/tlspuffin/openssl
