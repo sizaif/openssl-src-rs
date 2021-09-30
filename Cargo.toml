@@ -49,4 +49,4 @@ members = ['testcrate']
 [dependencies]
 cc = "1.0"
 bindgen = "0.53"
-security-claims = { path = "../security-claims" }
+security-claims = { path = "../../security-claims" }
