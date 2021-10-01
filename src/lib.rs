@@ -206,6 +206,11 @@ impl Build {
                 .arg("no-weak-ssl-ciphers");
         }
 
+        if cfg!(feature = "weak-crypto") {
+            configure
+                .arg("enable-weak-ssl-ciphers");
+        }
+
         if cfg!(not(feature = "camellia")) {
             configure.arg("no-camellia");
         }
